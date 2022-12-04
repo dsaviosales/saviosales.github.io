@@ -1,0 +1,43 @@
+
+<!-- saved from url=(0038)https://makeemviral.com/pixel1.php?t=1 -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta http-equiv="refresh" content="400">
+<meta name="referrer" content="no-referrer">
+<meta id="bbafmabaelnnkondpfpjmdklbmfnbmol"></head><body>
+
+<script>
+var domain = 'makeemviral.com';
+var time = Date.now();
+if(window.location.host != domain) {
+    window.location.href = "https://" + domain + "/pixel1.php?t=" + time;
+}
+
+setTimeout(function() {
+	try {
+		document.getElementById("player").remove();
+	} catch(ex){}
+	window.location.href = "https://" + domain + "/pixel1.php?t=" + time
+}, 300*1000);
+
+function createFrame1(url, id) {
+        var iframe = document.createElement('iframe');
+	iframe.src = url;
+	iframe.id = id;
+        document.body.appendChild(iframe);
+}
+
+function createFrame(videoId, el, autoplay, cc, id) {
+	var iframe = document.createElement('iframe');
+	iframe.src = 'https://www.google.com/url?sa=D&q=https%3A%2F%2Fwww.youtube.com%2Fembed%2F'+ videoId +'%3Fenablejsapi%3D0%26autoplay%3d'+ autoplay + '%26mute%3d1%26el%26showinfo%3D0%26playsinline%3D0%26modestbranding%3D0%26rel%3D0%26loop%3D0%26cc_load_policy%3D' + cc +'%26origin%3D*';
+	//iframe.src= 'https://www.youtube.com/embed/'+videoId+'?enablejsapi=0&autoplay='+ autoplay +'&mute=1&el='+el+'&showinfo=0&playsinline=0&modestbranding=0&rel=0&loop=0&cc_load_policy=' + cc + '&origin=*';
+	iframe.id = id;
+	iframe.style.height="1px";
+	iframe.style.width="1px";
+	document.body.appendChild(iframe);
+}
+
+</script>
+<!--<iframe id = "video" src="https://www.youtube.com/attribution_link?u=/embed%2Fc3JfCoV-6xI%3Fenablejsapi%3D0%26autoplay%3d0%26mute%3d1%26el%3D%26showinfo%3D0%26playsinline%3D0%26modestbranding%3D0%26rel%3D0%26loop%3D0%26cc_load_policy%3D0%26origin%3D*"></iframe>
+-->
+<iframe id="video" src="./url.html"></iframe>
+
+</body></html>

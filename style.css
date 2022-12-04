@@ -1,0 +1,67 @@
+* {
+    
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    box-sizing: border-box;
+  }
+
+  header {
+    background-image:url(./img/backgroud-fundo.jpeg);
+    background-size: contain;
+    /* background-color: rgb(23, 95, 195); */
+    padding: 20px;
+    text-align: center;
+    font-size: 20px ;
+    color: white;
+  }
+
+ .img-logo{
+    height: 100px;
+    border-radius: 15px;
+  }
+  
+  nav {
+    float: left;
+    width: 15%;
+    height: 350px; 
+    background: rgb(199, 209, 212);
+    padding: 20px;
+  }
+
+  nav ul {
+    font-size: 20px;
+    list-style-type: none;
+    padding: 5px;
+  }
+
+  article {
+    float: left;
+    padding: 20px;
+    width: 85%;
+    background-color: #f1f1f1;
+    height: 350px; 
+  }
+
+  /* section::after {
+    content: "";
+    display: table;
+    clear: both;
+  } */
+
+  footer {
+    background-color: #777;
+    padding: 10px;
+    text-align: center;
+    color: white;
+  }
+
+  #img-revisao-estrutura{
+    height: 250px;
+    padding-right: 10px;
+}
+    #img-revisao-estrutura-1{
+    height: 100%;
+   
+}

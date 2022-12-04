@@ -1,0 +1,212 @@
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  /* Bloco de códigos da Padrão */
+  .cabecalho-padrao {
+    background-image: url(./logo-matriz.gif);
+    background-size: contain;
+    width: 100%;
+    padding: 20px;
+    text-align: center;
+    font-size: 20px ;
+    color: white;
+    line-height: 1.5;
+
+    float: inline-start;
+    width: 100%;
+
+    /* display: inline-block;
+    position: fixed; */
+   
+  }
+ .img-logo{
+    height: 100px;
+    border-radius: 15px;
+  }
+  
+  .menu-lateral {
+    float: left;
+    width: 15%;
+    min-height: 420px;
+    height: auto; 
+    background: rgb(5, 127, 40);
+    padding: 20px;
+    text-decoration: none; 
+  }
+
+  .menu-lateral ul, li, a {
+    font-size: 15px;
+    list-style-type: none;
+    padding: 20px;
+    line-height: 1.8;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: white;
+  }
+
+  .menu-lateral a:hover li:hover {
+    color: white;
+    width: 100%;
+    background-color: black;
+    padding-left: 5px; 
+  }
+
+  .indice-paginas{
+    padding: 10px;
+  }
+
+  article {
+    float: left;
+    padding: 20px;
+    width: 85%;
+    background-color: #f1f1f1;
+    min-height: 420px;
+    height: auto; 
+  }
+
+  /* section::after {
+    content: "";
+    display: table;
+    clear: both;
+  } */
+
+  #rodape{
+    background-image: url(./logo-matriz.gif);
+    text-align:center;
+    width: 100%; 
+    padding: 30px;
+    
+    line-height: 25px; 
+    /* revisar espaçamento de linha */
+    color: white; 
+  }
+
+/* Bloco de Notas da pagina Home */
+#paragrafo-home{
+  padding: 25px;
+}
+
+.artigo-home a{
+  color: black;
+  font-weight: bold;
+}
+
+/* Bloco de Notas da Pagina Aulas */
+.menu-aulas li{
+  display: inline-block;
+  padding: 20px;
+  margin: 2% 1.5%;
+  text-align: center;
+  width: 13%;
+  color: black;
+
+  box-sizing: border-box ;
+  vertical-align: top;
+  border: 1px solid black;
+  border-radius: 15px;
+}
+
+.menu-aulas li:hover {
+  border: 3px solid rgb(22, 120, 11);
+  color: green;
+}
+
+.img-aula{
+  height: 100px;
+}
+.menu-aulas img:hover{
+  height: 110px;
+  text-align: center;
+}
+
+
+
+/* Bloco de CSS da pagina Revisão */
+#artigo-revisao {
+  padding: 5px;
+  display: inline-block;
+
+}
+
+#img-revisao-estrutura{
+  display: inline-block;
+  width: 100%;
+  padding-right: 10px;
+  position: relative;
+  
+}
+
+.img-estrutura-css{
+  display: inline-block;
+  padding-left: 25px;
+  /* position:static; */
+  /* width: 50%; */
+  
+}
+
+#nota-revisao{
+  padding-left: 25px;
+}
+
+#nota-revisao label, {
+ padding: 10px;
+ margin: 10px;
+}
+
+#notas{
+  margin-top: 15px;
+  padding: 5px;
+  margin-left: 25px;
+}
+
+#buttom-reprocessar {
+  margin-top: 15px;
+  padding: 10px;
+  color: white;
+  background-color: rgb(17, 17, 21);
+  border: none;
+  border-radius: 5px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 12px;
+}
+
+/* Bloco de Códigos da Página Prova */
+
+#dados-aluno{
+  padding: 10px;
+}
+#questao{
+  padding: 10px;
+}
+
+#codigo-analise pre
+{
+  width: 100%;
+  padding: 10px;
+  border: 1px solid black;
+  color: white;
+  background-color: black
+}
+
+/* Bloco de Código da Página Notas */
+
+.table-nota td{
+  border: 1px solid black;
+  text-align: center;
+  padding: 8px;
+}
+
+.table-nota{
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 75%;
+  text-align: center;
+  padding: 25px
+}
