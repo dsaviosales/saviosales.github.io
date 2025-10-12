@@ -8,7 +8,7 @@ if "pyodbc" not in sys.modules:
 if "requests" not in sys.modules:
     sys.modules["requests"] = mock.MagicMock()
 
-import winthor_address_updater as updater
+from winthor_automation.src import winthor_address_updater as updater
 
 
 class NormalizeAddressTests(TestCase):

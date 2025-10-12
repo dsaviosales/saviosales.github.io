@@ -91,6 +91,6 @@ O script `winthor_address_updater.py` acompanha este documento como um exemplo f
 
 1. Configure as variáveis de ambiente `WINTHOR_DSN`, `WINTHOR_DB_USER` e `WINTHOR_DB_PASSWORD` com as credenciais de acesso ao ERP.
 2. Instale as dependências com `pip install -r requirements.txt`.
-3. Execute `python winthor_address_updater.py --run-once` para processar um lote único ou omita `--run-once` para manter o processo em execução contínua, utilizando o intervalo definido em `--interval-hours` (padrão: 24 horas).
+3. Execute `python -m winthor_automation.src.winthor_address_updater --run-once` para processar um lote único ou omita `--run-once` para manter o processo em execução contínua, utilizando o intervalo definido em `--interval-hours` (padrão: 24 horas).
 
 Os logs de execução são gravados no diretório `logs/`, permitindo auditoria completa de cada ciclo do processo.
