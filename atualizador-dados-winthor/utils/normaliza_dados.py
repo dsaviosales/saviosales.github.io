@@ -14,20 +14,20 @@ def normalizar_resposta_api(cnpj: str, payload: Dict[str, Any]) -> Dict[str, Any
     if isinstance(atividades, list) and atividades:
         cnae_principal = atividades[0].get("code", "")
 
-    endereco = payload.get("logradouro", "")
-    numero = payload.get("numero", "")
-    bairro = payload.get("bairro", "")
-    cep = somente_digitos(payload.get("cep", ""))
-    cidade = payload.get("municipio", "")
-    estado = payload.get("uf", "")
-    fantasia = payload.get("fantasia") or payload.get("nome", "")
-    email = payload.get("email", "")
+    endereco = str(payload.get("logradouro", "") or "")
+    numero = str(payload.get("numero", "") or "")
+    bairro = str(payload.get("bairro", "") or "")
+    cep = somente_digitos(payload.get("cep"))
+    cidade = str(payload.get("municipio", "") or "")
+    estado = str(payload.get("uf", "") or "")
+    fantasia = str(payload.get("fantasia") or payload.get("nome", "") or "")
+    email = str(payload.get("email", "") or "")
 
     # Comentário breve: consolidamos os campos numa estrutura pronta para o TinyDB.
     return {
         "cnpj": normalizar_cnpj(cnpj),
         "ender": endereco.strip(),
-        "numeroend": str(numero).strip(),
+        "numeroend": numero.strip(),
         "bairro": bairro.strip(),
         "cep": cep.zfill(8) if cep else "",
         "cidade": cidade.strip(),

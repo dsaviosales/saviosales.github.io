@@ -12,7 +12,12 @@ from dotenv import load_dotenv
 # Configuramos o carregamento do .env apenas uma vez ao importar o módulo.
 BASE_DIR = Path(__file__).resolve().parent
 ENV_PATH = BASE_DIR / "config" / ".env"
-load_dotenv(ENV_PATH)
+
+# Para robustez cross-platform, forçamos o caminho absoluto e ignoramos se não existir.
+if ENV_PATH.exists():
+    load_dotenv(dotenv_path=ENV_PATH)
+else:
+    load_dotenv()
 
 
 class OracleConfigError(RuntimeError):
@@ -35,22 +40,38 @@ def _obter_variaveis_necessarias() -> Dict[str, str]:
 def criar_dsn(config: Dict[str, str]) -> str:
     """Cria um DSN compatível com cx_Oracle usando service name."""
 
-    # Nota: o cx_Oracle aceita service_name ou sid; aqui usamos service_name por padrão.
-    return cx_Oracle.makedsn(
-        config["ORA_HOST"],
-        int(config["ORA_PORT"]),
-        service_name=config["ORA_SID"],
-    )
+    host = config["ORA_HOST"].strip()
+    porta = int(config["ORA_PORT"].strip())
+    service = config["ORA_SID"].strip()
+    # Nota: makedsn garante compatibilidade independentemente do SO.
+    return cx_Oracle.makedsn(host, porta, service_name=service)
 
 
-def obter_conexao() -> cx_Oracle.Connection:
-    """Abre e retorna uma conexão com o Oracle."""
+def connectOracle() -> cx_Oracle.Connection:
+    """Retorna uma conexão única com o Oracle usando variáveis de ambiente."""
 
     config = _obter_variaveis_necessarias()
     dsn = criar_dsn(config)
-    logging.getLogger(__name__).debug("Conectando ao Oracle usando DSN %s", dsn)
-    # Explicação curta: cx_Oracle.connect cria a conexão real usando usuário/senha/DSN.
-    return cx_Oracle.connect(config["ORA_USER"], config["ORA_PASS"], dsn)
+    logger = logging.getLogger(__name__)
+    logger.debug("Conectando ao Oracle usando DSN %s", dsn)
+
+    try:
+        return cx_Oracle.connect(
+            config["ORA_USER"],
+            config["ORA_PASS"],
+            dsn,
+            encoding="UTF-8",
+            nencoding="UTF-8",
+        )
+    except cx_Oracle.DatabaseError as exc:  # pragma: no cover - dependente do ambiente Oracle
+        logger.error("Não foi possível estabelecer conexão com o Oracle: %s", exc)
+        raise
+
+
+def obter_conexao() -> cx_Oracle.Connection:
+    """Compatibilidade com versões anteriores (alias para connectOracle)."""
+
+    return connectOracle()
 
 
 def testar_conexao() -> bool:

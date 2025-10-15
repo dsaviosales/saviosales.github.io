@@ -11,12 +11,13 @@ import pandas as pd
 from tinydb import Query, TinyDB
 from tqdm import tqdm
 
-from database import obter_conexao
+from database import connectOracle
 from utils.tratardados import normalizar_cnpj
 
 BASE_DIR = Path(__file__).resolve().parent
 CACHE_PATH = BASE_DIR / "eunix.json"
 LOG_PATH = BASE_DIR / "log" / "download_info.log"
+FILES_DIR = BASE_DIR / "files"
 
 
 SQL_UPDATE = """
@@ -56,7 +57,14 @@ def configurar_logging() -> None:
 def carregar_cnpjs(caminho_csv: Path) -> Iterable[str]:
     """Carrega a lista de CNPJs do CSV informado."""
 
-    dados = pd.read_csv(caminho_csv, dtype=str)
+    caminho_normalizado = caminho_csv.expanduser()
+    if not caminho_normalizado.is_absolute():
+        caminho_normalizado = (Path.cwd() / caminho_normalizado).resolve()
+
+    if not caminho_normalizado.exists():
+        raise FileNotFoundError(f"Arquivo CSV não encontrado em {caminho_normalizado}")
+
+    dados = pd.read_csv(caminho_normalizado, dtype=str)
     if "CGC" not in dados.columns:
         raise ValueError("O arquivo CSV precisa conter a coluna 'CGC'.")
     return dados["CGC"].dropna().astype(str).tolist()
@@ -65,30 +73,34 @@ def carregar_cnpjs(caminho_csv: Path) -> Iterable[str]:
 def montar_parametros(registro: Dict[str, str]) -> Dict[str, str]:
     """Prepara os parâmetros do UPDATE com os nomes esperados."""
 
+    def _texto_limpo(chave: str, limite: int) -> str:
+        valor = registro.get(chave)
+        return str(valor or "").strip()[:limite]
+
     # Dica: manter o dicionário explícito evita erros de digitação em chaves.
     return {
-        "ender": registro.get("ender", "")[:60],
-        "cidade": registro.get("cidade", "")[:40],
-        "tipofornec": registro.get("tipofornec", "O"),
-        "fantasia": registro.get("fantasia", "")[:60],
-        "numeroend": registro.get("numeroend", "")[:10],
-        "bairro": registro.get("bairro", "")[:40],
-        "cep": registro.get("cep", "")[:8],
-        "estado": registro.get("estado", "")[:2],
-        "email": registro.get("email", "")[:80],
-        "cgc": registro["cnpj"],
+        "ender": _texto_limpo("ender", 60),
+        "cidade": _texto_limpo("cidade", 40),
+        "tipofornec": str(registro.get("tipofornec", "O") or "O"),
+        "fantasia": _texto_limpo("fantasia", 60),
+        "numeroend": _texto_limpo("numeroend", 10),
+        "bairro": _texto_limpo("bairro", 40),
+        "cep": _texto_limpo("cep", 8),
+        "estado": _texto_limpo("estado", 2),
+        "email": _texto_limpo("email", 80),
+        "cgc": normalizar_cnpj(registro.get("cnpj", "")),
     }
 
 
 def aplicar_updates(cnpjs: Iterable[str], dry_run: bool) -> None:
     """Lê registros do cache e aplica UPDATE usando bind parameters."""
 
-    db = TinyDB(CACHE_PATH)
+    db = TinyDB(str(CACHE_PATH))
     tabela = db.table("fornecedores")
 
     registros_atualizados = 0
 
-    with obter_conexao() as conexao:
+    with connectOracle() as conexao:
         cursor = conexao.cursor()
         for cnpj in tqdm(cnpjs, desc="Atualizando Oracle"):
             cnpj_normalizado = normalizar_cnpj(cnpj)
@@ -125,6 +137,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """Ponto de entrada do script."""
 
+    FILES_DIR.mkdir(parents=True, exist_ok=True)
+    CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
     configurar_logging()
     args = parse_args()
 

@@ -21,6 +21,7 @@ from utils.tratardados import normalizar_cnpj
 BASE_DIR = Path(__file__).resolve().parent
 CACHE_PATH = BASE_DIR / "eunix.json"
 LOG_PATH = BASE_DIR / "log" / "download_info.log"
+FILES_DIR = BASE_DIR / "files"
 DEFAULT_API_URL = "https://www.receitaws.com.br/v1/cnpj/{cnpj}"
 RATE_CALLS = 3
 RATE_PERIOD = 1
@@ -84,7 +85,14 @@ def obter_dados_cnpj(session: requests.Session, api_url: str, cnpj: str) -> Dict
 def carregar_cnpjs(caminho_csv: Path) -> Iterable[str]:
     """Lê a coluna 'CGC' do CSV informado."""
 
-    dados = pd.read_csv(caminho_csv, dtype=str)
+    caminho_normalizado = caminho_csv.expanduser()
+    if not caminho_normalizado.is_absolute():
+        caminho_normalizado = (Path.cwd() / caminho_normalizado).resolve()
+
+    if not caminho_normalizado.exists():
+        raise FileNotFoundError(f"Arquivo CSV não encontrado em {caminho_normalizado}")
+
+    dados = pd.read_csv(caminho_normalizado, dtype=str)
     if "CGC" not in dados.columns:
         raise ValueError("O arquivo CSV precisa conter a coluna 'CGC'.")
     return dados["CGC"].dropna().astype(str).tolist()
@@ -93,7 +101,7 @@ def carregar_cnpjs(caminho_csv: Path) -> Iterable[str]:
 def atualizar_cache(cnpjs: Iterable[str], api_url: str, dry_run: bool) -> None:
     """Busca dados para cada CNPJ e atualiza o cache TinyDB."""
 
-    db = TinyDB(CACHE_PATH)
+    db = TinyDB(str(CACHE_PATH))
     tabela = db.table("fornecedores")
     session = requests.Session()
 
@@ -133,6 +141,8 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """Função principal para execução como script."""
 
+    FILES_DIR.mkdir(parents=True, exist_ok=True)
+    CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
     configurar_logging()
     args = parse_args()
 

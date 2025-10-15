@@ -1,7 +1,6 @@
 pandas
 openpyxl
 tinydb
-
 cx_Oracle
 requests
 ratelimit
