@@ -10,14 +10,17 @@ from app_ui.ui.main_window import MainWindow
 
 def main() -> None:
     app = QApplication(sys.argv)
-    try:  # Tema escuro opcional
+
+    tema = None
+    try:  # Tema opcional controlado pela janela principal
         import qdarktheme  # type: ignore
 
-        qdarktheme.setup_theme()
+        tema = qdarktheme
+        tema.setup_theme(theme="light")
     except Exception:  # pragma: no cover - dependência opcional
-        pass
+        tema = None
 
-    janela = MainWindow()
+    janela = MainWindow(qdarktheme_module=tema)
     janela.show()
     sys.exit(app.exec())
 
