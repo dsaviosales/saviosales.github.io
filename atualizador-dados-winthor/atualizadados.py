@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Optional
 
 import pandas as pd
 from tinydb import Query, TinyDB
@@ -92,26 +93,50 @@ def montar_parametros(registro: Dict[str, str]) -> Dict[str, str]:
     }
 
 
-def aplicar_updates(cnpjs: Iterable[str], dry_run: bool) -> None:
+def aplicar_updates(
+    cnpjs: Iterable[str],
+    dry_run: bool,
+    limite: Optional[int],
+    criterios: Optional[Dict[str, object]],
+) -> None:
     """Lê registros do cache e aplica UPDATE usando bind parameters."""
+
+    if limite is not None and limite <= 0:
+        logging.info("Limite informado é %s; nenhuma atualização será processada.", limite)
+        return
 
     db = TinyDB(str(CACHE_PATH))
     tabela = db.table("fornecedores")
 
+    filtro_query = Query().fragment(criterios) if criterios else None
     registros_atualizados = 0
+    processados = 0
 
     with connectOracle() as conexao:
         cursor = conexao.cursor()
         for cnpj in tqdm(cnpjs, desc="Atualizando Oracle"):
+            if limite is not None and processados >= limite:
+                logging.info("Limite de %s registros atingido; encerrando a execução.", limite)
+                break
+
             cnpj_normalizado = normalizar_cnpj(cnpj)
-            resultado = tabela.get(Query().cnpj == cnpj_normalizado)
+            consulta = Query().cnpj == cnpj_normalizado
+            if filtro_query is not None:
+                consulta = consulta & filtro_query
+
+            resultado = tabela.get(consulta)
             if not resultado:
-                logging.warning("CNPJ %s não encontrado no cache.", cnpj_normalizado)
+                logging.warning("CNPJ %s não encontrado no cache ou fora do filtro.", cnpj_normalizado)
                 continue
 
             parametros = montar_parametros(resultado)
+            processados += 1
             if dry_run:
-                logging.info("Dry-run: update preparado para %s com dados %s", cnpj_normalizado, parametros)
+                logging.info(
+                    "Dry-run: update preparado para %s com dados %s",
+                    cnpj_normalizado,
+                    parametros,
+                )
                 continue
 
             cursor.execute(SQL_UPDATE, parametros)
@@ -125,12 +150,51 @@ def aplicar_updates(cnpjs: Iterable[str], dry_run: bool) -> None:
     db.close()
 
 
+def interpretar_criterios(select: Optional[str]) -> Optional[Dict[str, object]]:
+    """Converte o JSON informado na flag --select em dicionário do TinyDB."""
+
+    if not select:
+        return None
+
+    try:
+        criterios = json.loads(select)
+    except json.JSONDecodeError as erro:
+        raise ValueError("Valor inválido para --select; informe um JSON com pares chave/valor.") from erro
+
+    if not isinstance(criterios, dict):
+        raise ValueError("O parâmetro --select deve ser um objeto JSON (ex.: {\"cidade\": \"SAO PAULO\"}).")
+
+    # Comentário: retornamos o dicionário cru para que Query().fragment use os valores diretamente.
+    return {str(chave): valor for chave, valor in criterios.items()}
+
+
 def parse_args() -> argparse.Namespace:
     """Lê argumentos da linha de comando."""
 
     parser = argparse.ArgumentParser(description="Atualiza fornecedores no Oracle com base no cache local.")
-    parser.add_argument("--csv", type=Path, default=BASE_DIR / "files" / "fornecedores.csv", help="CSV usado como referência de CNPJs.")
-    parser.add_argument("--dry-run", action="store_true", help="Executa sem aplicar o commit no banco.")
+    parser.add_argument(
+        "--csv",
+        type=Path,
+        default=BASE_DIR / "files" / "fornecedores.csv",
+        help="CSV usado como referência de CNPJs.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Executa sem aplicar o commit no banco.",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Limita a quantidade de registros atualizados nesta execução.",
+    )
+    parser.add_argument(
+        "--select",
+        type=str,
+        default=None,
+        help="Filtro em JSON simples aplicado aos registros do TinyDB.",
+    )
     return parser.parse_args()
 
 
@@ -144,7 +208,8 @@ def main() -> None:
 
     cnpjs = carregar_cnpjs(args.csv)
     logging.info("Total de CNPJs para atualização: %s", len(cnpjs))
-    aplicar_updates(cnpjs, args.dry_run)
+    criterios = interpretar_criterios(args.select)
+    aplicar_updates(cnpjs, args.dry_run, args.limit, criterios)
 
 
 if __name__ == "__main__":

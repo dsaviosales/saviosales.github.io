@@ -4,12 +4,13 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+import time
 from pathlib import Path
 from typing import Dict, Iterable
 
 import pandas as pd
 import requests
-from ratelimit import RateLimitException, limits, sleep_and_retry
+from ratelimit import RateLimitException
 from requests import Response
 from requests.exceptions import RequestException
 from tinydb import Query, TinyDB
@@ -23,10 +24,33 @@ CACHE_PATH = BASE_DIR / "eunix.json"
 LOG_PATH = BASE_DIR / "log" / "download_info.log"
 FILES_DIR = BASE_DIR / "files"
 DEFAULT_API_URL = "https://www.receitaws.com.br/v1/cnpj/{cnpj}"
-RATE_CALLS = 3
-RATE_PERIOD = 1
-RETRY_LIMIT = 3
-TIMEOUT_SECONDS = 10
+DEFAULT_MAX_RPS = 3
+DEFAULT_RETRY_LIMIT = 3
+DEFAULT_TIMEOUT_SECONDS = 10
+
+
+class RateController:
+    """Controla o intervalo entre chamadas para respeitar o max_rps configurado."""
+
+    def __init__(self, max_rps: int) -> None:
+        self.max_rps = max(0, int(max_rps))
+        self.interval = 0.0 if self.max_rps <= 0 else 1.0 / float(self.max_rps)
+        self._last_call = 0.0
+
+    def esperar(self) -> None:
+        """Aguarda o tempo necessário para não exceder o limite configurado."""
+
+        if self.interval <= 0:
+            return
+
+        agora = time.monotonic()
+        if self._last_call > 0:
+            decorrido = agora - self._last_call
+            pausa = self.interval - decorrido
+            if pausa > 0:
+                time.sleep(pausa)
+
+        self._last_call = time.monotonic()
 
 
 def configurar_logging() -> None:
@@ -50,24 +74,36 @@ def configurar_logging() -> None:
     logger.addHandler(console)
 
 
-@sleep_and_retry
-@limits(calls=RATE_CALLS, period=RATE_PERIOD)
-def _chamar_api(session: requests.Session, url: str) -> Response:
+def _chamar_api(
+    session: requests.Session,
+    url: str,
+    timeout: float,
+    controlador: RateController,
+) -> Response:
     """Executa a chamada HTTP respeitando o rate limit configurado."""
 
-    resposta = session.get(url, timeout=TIMEOUT_SECONDS)
+    controlador.esperar()
+    resposta = session.get(url, timeout=timeout)
     if resposta.status_code == 429:
-        raise RateLimitException("Limite da API atingido", period_remaining=RATE_PERIOD)
+        periodo = max(1, int(round(controlador.interval))) if controlador.interval > 0 else 1
+        raise RateLimitException("Limite da API atingido", period_remaining=periodo)
     return resposta
 
 
-def obter_dados_cnpj(session: requests.Session, api_url: str, cnpj: str) -> Dict[str, str]:
+def obter_dados_cnpj(
+    session: requests.Session,
+    api_url: str,
+    cnpj: str,
+    timeout: float,
+    retry_limit: int,
+    controlador: RateController,
+) -> Dict[str, str]:
     """Chama a API com tentativas extras em caso de falhas transitórias."""
 
-    for tentativa in range(1, RETRY_LIMIT + 1):
+    for tentativa in range(1, retry_limit + 1):
         try:
             url = api_url.format(cnpj=cnpj)
-            resposta = _chamar_api(session, url)
+            resposta = _chamar_api(session, url, timeout, controlador)
             resposta.raise_for_status()
             payload = resposta.json()
             if payload.get("status") == "ERROR":
@@ -76,8 +112,14 @@ def obter_dados_cnpj(session: requests.Session, api_url: str, cnpj: str) -> Dict
         except RateLimitException as erro:
             logging.warning("Rate limit atingido: %s", erro)
         except RequestException as erro:
-            logging.warning("Falha ao consultar CNPJ %s (tentativa %s/%s): %s", cnpj, tentativa, RETRY_LIMIT, erro)
-        if tentativa < RETRY_LIMIT:
+            logging.warning(
+                "Falha ao consultar CNPJ %s (tentativa %s/%s): %s",
+                cnpj,
+                tentativa,
+                retry_limit,
+                erro,
+            )
+        if tentativa < retry_limit:
             continue
         raise
 
@@ -98,17 +140,32 @@ def carregar_cnpjs(caminho_csv: Path) -> Iterable[str]:
     return dados["CGC"].dropna().astype(str).tolist()
 
 
-def atualizar_cache(cnpjs: Iterable[str], api_url: str, dry_run: bool) -> None:
+def atualizar_cache(
+    cnpjs: Iterable[str],
+    api_url: str,
+    dry_run: bool,
+    timeout: float,
+    retry_limit: int,
+    max_rps: int,
+) -> None:
     """Busca dados para cada CNPJ e atualiza o cache TinyDB."""
 
     db = TinyDB(str(CACHE_PATH))
     tabela = db.table("fornecedores")
     session = requests.Session()
+    controlador = RateController(max_rps=max_rps)
 
     for cnpj in tqdm(cnpjs, desc="Consultando API"):
         cnpj_normalizado = normalizar_cnpj(cnpj)
         try:
-            payload = obter_dados_cnpj(session, api_url, cnpj_normalizado)
+            payload = obter_dados_cnpj(
+                session,
+                api_url,
+                cnpj_normalizado,
+                timeout,
+                retry_limit,
+                controlador,
+            )
         except Exception as erro:  # pragma: no cover - feedback essencial em runtime
             logging.error("Erro ao buscar dados do CNPJ %s: %s", cnpj_normalizado, erro)
             continue
@@ -132,8 +189,35 @@ def parse_args() -> argparse.Namespace:
     """Interpreta argumentos de linha de comando."""
 
     parser = argparse.ArgumentParser(description="Baixa dados de fornecedores e atualiza o cache local.")
-    parser.add_argument("--csv", type=Path, default=BASE_DIR / "files" / "fornecedores.csv", help="Caminho do CSV com a coluna CGC.")
-    parser.add_argument("--api-url", default=DEFAULT_API_URL, help="URL da API com placeholder {cnpj}.")
+    parser.add_argument(
+        "--csv",
+        type=Path,
+        default=BASE_DIR / "files" / "fornecedores.csv",
+        help="Caminho do CSV com a coluna CGC.",
+    )
+    parser.add_argument(
+        "--api-url",
+        default=DEFAULT_API_URL,
+        help="URL da API com placeholder {cnpj}.",
+    )
+    parser.add_argument(
+        "--max-rps",
+        type=int,
+        default=DEFAULT_MAX_RPS,
+        help="Máximo de chamadas por segundo (padrão: %(default)s).",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=DEFAULT_TIMEOUT_SECONDS,
+        help="Tempo máximo de espera por resposta da API em segundos.",
+    )
+    parser.add_argument(
+        "--retries",
+        type=int,
+        default=DEFAULT_RETRY_LIMIT,
+        help="Quantidade de tentativas em caso de erro transitório.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Executa sem salvar no cache.")
     return parser.parse_args()
 
@@ -148,7 +232,14 @@ def main() -> None:
 
     cnpjs = carregar_cnpjs(args.csv)
     logging.info("Total de CNPJs para consulta: %s", len(cnpjs))
-    atualizar_cache(cnpjs, args.api_url, args.dry_run)
+    atualizar_cache(
+        cnpjs,
+        args.api_url,
+        args.dry_run,
+        timeout=args.timeout,
+        retry_limit=args.retries,
+        max_rps=args.max_rps,
+    )
 
 
 if __name__ == "__main__":
