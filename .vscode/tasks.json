@@ -1,0 +1,54 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "1) Coleta (API→TinyDB)",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "buscardados.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/atualizador-dados-winthor"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "2) Atualiza Oracle",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "atualizadados.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/atualizador-dados-winthor"
+      },
+      "group": "none",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "3) Atualiza Oracle (dry-run)",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "atualizadados.py",
+        "--dry-run"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/atualizador-dados-winthor"
+      },
+      "group": "none",
+      "presentation": {
+        "reveal": "always"
+      }
+    }
+  ]
+}
