@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import logging
 import sys
 import time
@@ -23,6 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent
 CACHE_PATH = BASE_DIR / "eunix.json"
 LOG_PATH = BASE_DIR / "log" / "download_info.log"
 FILES_DIR = BASE_DIR / "files"
+RELATORIO_CACHE = LOG_PATH.parent / "cacheados.csv"
 DEFAULT_API_URL = "https://www.receitaws.com.br/v1/cnpj/{cnpj}"
 DEFAULT_MAX_RPS = 3
 DEFAULT_RETRY_LIMIT = 3
@@ -155,31 +157,40 @@ def atualizar_cache(
     session = requests.Session()
     controlador = RateController(max_rps=max_rps)
 
-    for cnpj in tqdm(cnpjs, desc="Consultando API"):
-        cnpj_normalizado = normalizar_cnpj(cnpj)
-        try:
-            payload = obter_dados_cnpj(
-                session,
-                api_url,
-                cnpj_normalizado,
-                timeout,
-                retry_limit,
-                controlador,
-            )
-        except Exception as erro:  # pragma: no cover - feedback essencial em runtime
-            logging.error("Erro ao buscar dados do CNPJ %s: %s", cnpj_normalizado, erro)
-            continue
+    with open(RELATORIO_CACHE, "w", newline="", encoding="utf-8") as relatorio:
+        escritor = csv.writer(relatorio)
+        escritor.writerow(["cnpj", "status", "motivo"])
 
-        registro = normalizar_resposta_api(cnpj_normalizado, payload)
-        logging.info("Dados obtidos para %s", cnpj_normalizado)
+        for cnpj in tqdm(cnpjs, desc="Consultando API"):
+            cnpj_normalizado = normalizar_cnpj(cnpj)
+            try:
+                payload = obter_dados_cnpj(
+                    session,
+                    api_url,
+                    cnpj_normalizado,
+                    timeout,
+                    retry_limit,
+                    controlador,
+                )
+            except Exception as erro:  # pragma: no cover - feedback essencial em runtime
+                mensagem = str(erro)
+                logging.error("Erro ao buscar dados do CNPJ %s: %s", cnpj_normalizado, mensagem)
+                escritor.writerow([cnpj_normalizado, "skipped", mensagem])
+                continue
 
-        if dry_run:
-            logging.info("Dry-run: registro não persistido no cache.")
-            continue
+            registro = normalizar_resposta_api(cnpj_normalizado, payload)
+            logging.info("Dados obtidos para %s", cnpj_normalizado)
 
-        tabela.upsert(registro, Query().cnpj == registro["cnpj"])
-        # Explicação: o upsert atualiza se existir ou insere um novo registro.
-        logging.info("Registro atualizado no cache para %s", registro["cnpj"])
+            if dry_run:
+                motivo = "dry-run (sem persistir no cache)"
+                logging.info("Dry-run: registro não persistido no cache.")
+                escritor.writerow([cnpj_normalizado, "skipped", motivo])
+                continue
+
+            tabela.upsert(registro, Query().cnpj == registro["cnpj"])
+            # Explicação: o upsert atualiza se existir ou insere um novo registro.
+            logging.info("Registro atualizado no cache para %s", registro["cnpj"])
+            escritor.writerow([cnpj_normalizado, "cached", "Registro atualizado no cache"])
 
     session.close()
     db.close()

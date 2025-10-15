@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import logging
 import sys
@@ -19,6 +20,8 @@ BASE_DIR = Path(__file__).resolve().parent
 CACHE_PATH = BASE_DIR / "eunix.json"
 LOG_PATH = BASE_DIR / "log" / "download_info.log"
 FILES_DIR = BASE_DIR / "files"
+RELATORIO_OK = LOG_PATH.parent / "atualizados_ok.csv"
+RELATORIO_ERROS = LOG_PATH.parent / "atualizados_erros.csv"
 
 
 SQL_UPDATE = """
@@ -93,6 +96,16 @@ def montar_parametros(registro: Dict[str, str]) -> Dict[str, str]:
     }
 
 
+def escrever_relatorio(caminho: Path, linhas: list[list[str]]) -> None:
+    """Grava o relatório CSV garantindo compatibilidade cross-platform."""
+
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    with open(caminho, "w", newline="", encoding="utf-8") as relatorio:
+        escritor = csv.writer(relatorio)
+        escritor.writerow(["cnpj", "mensagem"])
+        escritor.writerows(linhas)
+
+
 def aplicar_updates(
     cnpjs: Iterable[str],
     dry_run: bool,
@@ -103,6 +116,8 @@ def aplicar_updates(
 
     if limite is not None and limite <= 0:
         logging.info("Limite informado é %s; nenhuma atualização será processada.", limite)
+        escrever_relatorio(RELATORIO_OK, [])
+        escrever_relatorio(RELATORIO_ERROS, [])
         return
 
     db = TinyDB(str(CACHE_PATH))
@@ -111,6 +126,8 @@ def aplicar_updates(
     filtro_query = Query().fragment(criterios) if criterios else None
     registros_atualizados = 0
     processados = 0
+    sucesso_relatorio: list[list[str]] = []
+    erros_relatorio: list[list[str]] = []
 
     with connectOracle() as conexao:
         cursor = conexao.cursor()
@@ -126,7 +143,9 @@ def aplicar_updates(
 
             resultado = tabela.get(consulta)
             if not resultado:
+                mensagem = "não encontrado no cache ou fora do filtro"
                 logging.warning("CNPJ %s não encontrado no cache ou fora do filtro.", cnpj_normalizado)
+                erros_relatorio.append([cnpj_normalizado, mensagem])
                 continue
 
             parametros = montar_parametros(resultado)
@@ -137,17 +156,30 @@ def aplicar_updates(
                     cnpj_normalizado,
                     parametros,
                 )
+                sucesso_relatorio.append([cnpj_normalizado, "dry-run (não aplicado)"])
                 continue
 
-            cursor.execute(SQL_UPDATE, parametros)
+            try:
+                cursor.execute(SQL_UPDATE, parametros)
+            except Exception as erro:  # pragma: no cover - depende do Oracle em runtime
+                mensagem = str(erro)
+                logging.error("Falha ao aplicar update para %s: %s", cnpj_normalizado, mensagem)
+                erros_relatorio.append([cnpj_normalizado, mensagem])
+                continue
+
             registros_atualizados += cursor.rowcount
+            mensagem = f"{cursor.rowcount} linha(s) afetada(s)"
             logging.info("Update aplicado para %s", cnpj_normalizado)
+            sucesso_relatorio.append([cnpj_normalizado, mensagem])
 
         if not dry_run:
             conexao.commit()
             logging.info("Total de registros afetados: %s", registros_atualizados)
 
     db.close()
+
+    escrever_relatorio(RELATORIO_OK, sucesso_relatorio)
+    escrever_relatorio(RELATORIO_ERROS, erros_relatorio)
 
 
 def interpretar_criterios(select: Optional[str]) -> Optional[Dict[str, object]]:
