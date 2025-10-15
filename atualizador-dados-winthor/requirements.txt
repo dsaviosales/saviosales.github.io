@@ -1,0 +1,10 @@
+pandas
+openpyxl
+tinydb
+cx_Oracle
+requests
+ratelimit
+tqdm
+python-dotenv
+PySide6
+qdarktheme
