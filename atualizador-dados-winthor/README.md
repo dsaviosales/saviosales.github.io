@@ -47,6 +47,8 @@ atualizador-dados-winthor/
    ```
 5. Copie `config/.env.example` para `config/.env` (crie o arquivo com as variáveis abaixo).
 
+> **Dica rápida**: se preferir automatizar a criação do ambiente virtual, rode `python -m venv .venv && source .venv/bin/activate` (macOS/Linux) ou `python -m venv .venv; .\.venv\Scripts\Activate.ps1` (Windows PowerShell) diretamente do diretório `atualizador-dados-winthor`.
+
 ### Variáveis obrigatórias (`config/.env`)
 
 ```
@@ -70,6 +72,27 @@ ORA_SID=servicename_ou_sid
    python atualizadados.py --csv files/fornecedores.csv
    ```
    - Flags úteis: `--dry-run`, `--limit`, `--select '{"estado": "SP"}'`.
+
+## Testes e validações
+
+Com o ambiente virtual ativo, utilize os comandos abaixo para validar rapidamente o projeto:
+
+- Instale as dependências de testes (se ainda não instaladas):
+  ```bash
+  pip install -r requirements.txt
+  pip install pytest
+  ```
+- Execute a suíte de testes automatizados (inclui o teste PyTest do mapeamento de CNAE e os doctests do módulo de tratamento de dados):
+  ```bash
+  pytest -q
+  python -m doctest -v utils/tratardados.py
+  ```
+- Opcional: compile toda a árvore Python para garantir ausência de erros de sintaxe.
+  ```bash
+  python -m compileall .
+  ```
+
+Esses comandos funcionam tanto no Windows (PowerShell) quanto no macOS/Linux (bash/zsh); ajuste o prefixo `python` para `python3` se necessário no seu ambiente.
 
 ## Registro e observabilidade
 
