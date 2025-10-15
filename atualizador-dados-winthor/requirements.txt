@@ -6,3 +6,5 @@ requests
 ratelimit
 tqdm
 python-dotenv
+PySide6
+qdarktheme
