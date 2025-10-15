@@ -1,0 +1,42 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Buscar dados fornecedores",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "buscardados.py",
+                "--csv",
+                "files/fornecedores.csv"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "Atualizar dados WinThor",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "atualizadados.py",
+                "--csv",
+                "files/fornecedores.csv"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "none",
+            "presentation": {
+                "reveal": "always"
+            }
+        }
+    ]
+}

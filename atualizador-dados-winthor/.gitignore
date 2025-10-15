@@ -1,0 +1,10 @@
+# Python caches
+__pycache__/
+
+# Ambientes virtuais locais
+.venv/
+
+# Arquivos específicos do projeto
+config/.env
+eunix.json
+log/
