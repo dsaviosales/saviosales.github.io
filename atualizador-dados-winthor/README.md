@@ -76,6 +76,12 @@ ORA_SID=servicename_ou_sid
 - Logs são gravados em `log/download_info.log` e replicados no console.
 - O cache TinyDB fica em `eunix.json` com upsert por CNPJ.
 
+## Troubleshooting
+
+- **Erro `DPI-1047: Cannot locate a 64-bit Oracle Client library`**: confirme que o Oracle Instant Client compatível com seu sistema operacional está instalado, descompactado e referenciado no `PATH` (e `DYLD_LIBRARY_PATH` no macOS). Reinicie o terminal após ajustar as variáveis.
+- **Timeouts ou `HTTP 429` ao consultar a API**: reduza o ritmo com `--max-rps`, aumente `--timeout` e `--retries`, ou faça uma pausa antes de retomar a coleta para respeitar o limite do provedor.
+- **Falha ao conectar no Oracle**: valide host, porta, usuário e senha no `config/.env`, verifique conectividade de rede/VPN e utilize `python atualizadados.py --dry-run` para garantir que as credenciais estejam corretas antes de aplicar commits.
+
 ## Checklist rápido
 
 - [ ] Ambiente virtual criado e dependências instaladas.

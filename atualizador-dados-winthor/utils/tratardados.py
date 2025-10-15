@@ -13,13 +13,25 @@ def somente_digitos(valor: Optional[str]) -> str:
 
 
 def so_digitos(valor: Optional[str]) -> str:
-    """Wrapper compatível que reutiliza a lógica de `somente_digitos`."""
+    """Wrapper compatível que reutiliza a lógica de `somente_digitos`.
+
+    >>> so_digitos("12.345-6/7")
+    '1234567'
+    >>> so_digitos(None)
+    ''
+    """
 
     return somente_digitos(valor)
 
 
 def normalizar_cnpj(cnpj: str) -> str:
-    """Normaliza um CNPJ para conter exatamente 14 dígitos."""
+    """Normaliza um CNPJ para conter exatamente 14 dígitos.
+
+    >>> normalizar_cnpj('12.345.678/0001-90')
+    '12345678000190'
+    >>> normalizar_cnpj('123')
+    '00000000000123'
+    """
 
     apenas_numeros = somente_digitos(cnpj)
     return apenas_numeros.zfill(14)
