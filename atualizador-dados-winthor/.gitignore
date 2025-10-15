@@ -8,3 +8,8 @@ __pycache__/
 config/.env
 eunix.json
 log/
+
+# Artefatos de build
+dist/
+build/
+*.spec

@@ -64,13 +64,12 @@ ORA_SID=servicename_ou_sid
    ```bash
    python buscardados.py --csv files/fornecedores.csv
    ```
-   - Use `--api-url` para apontar outra API.
-   - Use `--dry-run` para simular sem gravar o cache.
+   - Flags úteis: `--api-url`, `--max-rps`, `--timeout`, `--retries`, `--dry-run`.
 3. Execute a atualização no Oracle:
    ```bash
    python atualizadados.py --csv files/fornecedores.csv
    ```
-   - Use `--dry-run` para revisar as instruções sem aplicar `commit`.
+   - Flags úteis: `--dry-run`, `--limit`, `--select '{"estado": "SP"}'`.
 
 ## Registro e observabilidade
 
@@ -88,3 +87,32 @@ ORA_SID=servicename_ou_sid
 ## Tarefas VS Code
 
 O arquivo `.vscode/tasks.json` fornece atalhos para executar os dois passos principais direto do editor.
+
+## Interface desktop (PySide6)
+
+- Execute a interface TOTVS-like com o comando abaixo (após ativar o ambiente virtual):
+  ```bash
+  python -m app_ui.main
+  ```
+- A janela permite importar CSV, consultar a API e aplicar atualizações usando *workers* que chamam os mesmos serviços Python do CLI.
+- Utilize o menu para alternar entre tema claro/escuro e acompanhar os status de API/Oracle.
+
+## Empacotamento com PyInstaller
+
+1. Instale o PyInstaller dentro do ambiente virtual caso ainda não esteja disponível:
+   ```bash
+   pip install pyinstaller
+   ```
+2. Gere os executáveis (CLI + UI) usando o script de build:
+   - **Windows (PowerShell)**
+     ```powershell
+     cd atualizador-dados-winthor
+     python build.py --onefile
+     ```
+   - **macOS / Linux (bash/zsh)**
+     ```bash
+     cd atualizador-dados-winthor
+     python3 build.py --onefile
+     ```
+   - Use `--target` (`buscardados`, `atualizadados`, `atualizador-ui`) para compilar executáveis específicos.
+3. Os binários ficarão disponíveis na pasta `atualizador-dados-winthor/dist/`. A pasta `build/` e possíveis arquivos `.spec` são descartáveis e já estão ignorados no Git.
